@@ -1,0 +1,25 @@
+# Makefile for creating executables for user1 and user2
+
+CC = gcc
+CFLAGS = -Wall -Wextra -pedantic -std=c11
+
+SRC1 = user1.c msocket.c
+SRC2 = user2.c msocket.c
+OBJ1 = $(SRC1:.c=.o)
+OBJ2 = $(SRC2:.c=.o)
+EXEC1 = user1
+EXEC2 = user2
+
+all: $(EXEC1) $(EXEC2)
+
+$(EXEC1): $(OBJ1)
+    $(CC) $(CFLAGS) $^ -o $@
+
+$(EXEC2): $(OBJ2)
+    $(CC) $(CFLAGS) $^ -o $@
+
+%.o: %.c msocket.h
+    $(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+    rm -f $(OBJ1) $(OBJ2) $(EXEC1) $(EXEC2)

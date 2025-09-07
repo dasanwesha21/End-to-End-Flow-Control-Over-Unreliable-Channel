@@ -1,0 +1,85 @@
+1. msocket.h and msocket.c : 
+
+    Data structures used:
+        struct win_t : struct type of receive and send window
+            int win_start : window start index
+            int win_end : window end index
+            int win_size : window size
+            int interim_pointer : for send window, points to the first message in window that 
+                                    has not been sent, and for the receive window, points to
+                                    the last message in window in order whose ack has been sent
+            char window[MAX_SEQ_NO][MAX_LEN] : stores all the messages in the window
+            time_t time[MAX_SEQ_NO] : stores the time at which the messages were sent in the sender window
+
+        struct socket_t : struct to store all the data related to one socket
+            int used : Indicates whether this entry is in use, i.e. socket already in use
+            int sockfd : UDP socket file descriptor(of source)
+            int bound : Indicates whether the socket is bound
+
+            int pid : pid of owner process
+
+            struct sockaddr_in source_addr : Source IP and port
+            struct sockaddr_in destination_addr : Destination IP and port
+
+            char send_buff[MAX_SEND_BUFF_SIZE][MAX_LEN] : buffer for send side 
+            char recv_buff[MAX_RECV_BUFF_SIZE][MAX_LEN] : buffer for receive side 
+
+            win_t swnd : send window
+            win_t rwnd : receive window
+
+        struct sock_info : struct to create a shared memory, which is used by msocket.c and initmsocket.c while creating a socket
+            int sock_id : socket id
+            int port : port number
+            int ip : ip address
+            int err_no : error number
+
+    
+    Functions defined in msocket.h and used in msocket.c : 
+        int m_socket(int domain, int type, int protocol) : used to create a  UDP socket in the initmsocket process and uses the 
+                                                            socket to create a MTP socket
+
+        int m_bind(int sockfd, const char* src_ip, const int src_port, const char* dest_ip, const int dest_port) : used to bind
+                                                            the UDP socket with a port, and also store the predefined destination
+                                                            ip and port for the MTP socket
+
+        ssize_t m_sendto(int sockfd, const void *buf, ssize_t len, int flags, struct sockaddr_in *dest_addr) : function to send data 
+                                                            from sender socket's send buffer to receiver to which it is bound
+                                                            
+        ssize_t m_recvfrom(int sockfd, void *buf, ssize_t len, int flags, struct sockaddr_in *src_addr) : function to receive data
+                                                            in the receiver socket's receive buffer from the sender to which it is bound\
+        
+        int m_close(int sockfd) : function to close the socket and remove its entry from the list of sockets
+
+
+
+2. initmsocket.c : 
+    Data stuctures used : Same as those defined in msocket.h
+
+    Functions defined and used : 
+        int minfunc(int a, int b) : to find minimum in two integers a and b
+
+        void *R_function(void *arg) : defined for the Rthread. This function looks at receive buffer and receive window and shifts max possible
+                                        messages from the window to the buffer. It also updates the win_size field(which stores the number of 
+                                        free places in the receive window), and sets flag according to it, while also sending this value with 
+                                        the acks whenever they are to be sent. It uses select call to wait on all sockets, and on coming out
+                                        of it checks, for all sockets, what message is received. Depending on if it is a data message or an ack
+                                        (differentiated by the first byte of the message) it either stores the message and updates the receiver
+                                        window details, or shifts the start of sender window and updates the sender window size according to the 
+                                        size sent to it(ack is of 4 bytes: 1st byte is identifier, second is the rwnd_size and third is the sequence 
+                                        number).
+                                        Also everytime there is a timeout, it checks the receive window and updates the no_space flag.
+
+        void *S_function(void *arg) : defined for the Sthread. This function periodically wakes up and looks at the send buffer and the send window 
+                                        and shifts max possible messages from the send buffer to the send window. It then send the messages in the send 
+                                        window.
+
+        void *G_function(void *arg) : defined for the Gthread. This function wakes up periodically and checks for all the used sockets if their owner
+                                        process is alive or not usinf the kill syscall. In case the owner process is dead, it removes the details of
+                                        the socket.
+
+        int main() : main function, used to intitialise all the shared memory and semaphores, and create the threads. This function is signalled by the 
+                        m_socket function to create UDP sockets and store the socket id in the shared memory.
+
+
+
+        

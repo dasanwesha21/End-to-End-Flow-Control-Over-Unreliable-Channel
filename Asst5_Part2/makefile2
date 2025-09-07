@@ -1,0 +1,19 @@
+# Makefile for creating the initmsocket executable
+
+CC = gcc
+CFLAGS = -Wall -Wextra -pedantic -std=c11
+
+SRC = initmsocket.c msocket.c
+OBJ = $(SRC:.c=.o)
+EXEC = initmsocket
+
+all: $(EXEC)
+
+$(EXEC): $(OBJ)
+    $(CC) $(CFLAGS) $^ -o $@
+
+%.o: %.c msocket.h
+    $(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+    rm -f $(OBJ) $(EXEC)

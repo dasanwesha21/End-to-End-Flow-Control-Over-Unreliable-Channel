@@ -1,0 +1,19 @@
+# Makefile for generating libmsocket.a
+
+CC = gcc
+CFLAGS = -Wall -Wextra -pedantic -std=c11
+
+SRC = msocket.c
+OBJ = $(SRC:.c=.o)
+LIB = libmsocket.a
+
+all: $(LIB)
+
+$(LIB): $(OBJ)
+    ar rcs $@ $^
+
+%.o: %.c msocket.h
+    $(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+    rm -f $(OBJ) $(LIB)
